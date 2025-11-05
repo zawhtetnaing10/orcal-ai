@@ -11,3 +11,4 @@ wheels/
 
 # Personal data
 data/
+cache/
