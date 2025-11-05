@@ -81,11 +81,10 @@ class InvertedIndex:
     def bm25_search(self, query: str, limit: int):
         """
             Do a bm25 search from saved index.
-            Return all the results
         """
         retriever = self._build_or_load_index()
 
-        # Set the top k results to 1.
+        # Set the top k results to the given limit.
         retriever.k = limit
 
         # Change the k value after testing
@@ -98,7 +97,7 @@ class InvertedIndex:
             If the index hasn't been built yet, build it first.
             Then load the index and return it.
         """
-        # If index does not exists build it first.
+        # If index does not exist, build it first.
         if not os.path.exists(constants.INDEX_FILE_PATH):
             self.build()
 
