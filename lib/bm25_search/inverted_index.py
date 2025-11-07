@@ -1,20 +1,11 @@
 import os
 from lib.utils.text_utils import tokenize_text
 from langchain_core.documents import Document
-from langchain_community.document_loaders import JSONLoader
 from langchain_community.retrievers import BM25Retriever
 
 import lib.utils.constants as constants
+import lib.utils.data_loader_utils as data_loader_utils
 import pickle
-
-
-def metadata_func(record: dict, metadata: dict) -> dict:
-    """
-        Extract id and title to use as metadata for the documents
-    """
-    metadata["id"] = record.get("id")
-    metadata["title"] = record.get("title")
-    return metadata
 
 
 class InvertedIndex:
@@ -26,13 +17,7 @@ class InvertedIndex:
         try:
 
             # Load json and create documents
-            loader = JSONLoader(
-                file_path=constants.ABOUT_ME_FILE_PATH,
-                jq_schema='.personal_info[]',
-                content_key="details",
-                metadata_func=metadata_func
-            )
-            documents = loader.load()
+            documents = data_loader_utils.load_about_me()
 
             # Transform the documents. Add title before details in page content
             documents = self._transform_docs(documents)
