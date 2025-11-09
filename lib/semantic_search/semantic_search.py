@@ -7,6 +7,9 @@ import lib.utils.data_loader_utils as data_loader_utils
 class SemanticSearch:
 
     def build_embeddings(self):
+        """
+            Chunk all the documents and build embeddings out of it.
+        """
         try:
             # Load the documents
             documents = data_loader_utils.load_about_me()
@@ -16,6 +19,11 @@ class SemanticSearch:
             for index, doc in enumerate(documents):
                 chunks = self.semantic_chunk(doc, index)
                 all_chunks.extend(chunks)
+
+            print("All documents chunked successfully")
+            for index, chunk in enumerate(all_chunks):
+                print(f"{index + 1}. {chunk}")
+                print("")
 
             # TODO: - Embed and Save
 
@@ -29,6 +37,7 @@ class SemanticSearch:
         """
 
         # Separator list for sentence awareness
+        # TODO: - Find out how chunking works.
         custom_separators = [
             "\n\n",
             "\n",

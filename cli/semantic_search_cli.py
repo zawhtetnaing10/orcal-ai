@@ -18,6 +18,14 @@ def handle_semantic_chunk(semantic_search: SemanticSearch, text: str):
         print("")
 
 
+def handle_build_embeddings(semantic_search: SemanticSearch):
+    """
+        Handles build_embedding command
+        Build embeddings for all documents inside about_me.json
+    """
+    semantic_search.build_embeddings()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Semantic Search CLI")
     subparsers = parser.add_subparsers(
@@ -29,6 +37,10 @@ def main():
     semantic_chunk_parser.add_argument(
         "text", type=str, help="The text to chunk")
 
+    # Build
+    subparsers.add_parser(
+        "build_embeddings", help="Build embeddings for the docs in about_me.json")
+
     # Semantic search object
     semantic_search = SemanticSearch()
 
@@ -38,6 +50,8 @@ def main():
     match args.command:
         case "semantic_chunk":
             handle_semantic_chunk(semantic_search, args.text)
+        case "build_embeddings":
+            handle_build_embeddings(semantic_search)
 
 
 if __name__ == "__main__":

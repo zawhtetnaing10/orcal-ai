@@ -1,6 +1,7 @@
 from langchain_core.documents import Document
 from langchain_community.document_loaders import JSONLoader
-import constants
+
+from lib.utils.constants import ABOUT_ME_FILE_PATH
 
 
 def metadata_func(record: dict, metadata: dict) -> dict:
@@ -18,7 +19,7 @@ def load_about_me() -> list[Document]:
     """
     # Load json and create documents
     loader = JSONLoader(
-        file_path=constants.ABOUT_ME_FILE_PATH,
+        file_path=ABOUT_ME_FILE_PATH,
         jq_schema='.personal_info[]',
         content_key="details",
         metadata_func=metadata_func
