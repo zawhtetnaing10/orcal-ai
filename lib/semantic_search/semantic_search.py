@@ -2,9 +2,21 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 import lib.utils.data_loader_utils as data_loader_utils
+import lib.utils.constants as constants
+
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
 
 
 class SemanticSearch:
+
+    def __init__(self):
+        self.embeddings = HuggingFaceEmbeddings(
+            model_name=constants.EMBEDDING_MODEL_NAME,
+            model_kwargs={"device": "cpu"}
+        )
+        self.vector_db = None
+        self.documents = []
 
     def build_embeddings(self):
         """
@@ -12,11 +24,11 @@ class SemanticSearch:
         """
         try:
             # Load the documents
-            documents = data_loader_utils.load_about_me()
+            self.documents = data_loader_utils.load_about_me()
 
             # Chunk all the docs
             all_chunks = []
-            for index, doc in enumerate(documents):
+            for index, doc in enumerate(self.documents):
                 chunks = self.semantic_chunk(doc, index)
                 all_chunks.extend(chunks)
 
@@ -25,10 +37,26 @@ class SemanticSearch:
                 print(f"{index + 1}. {chunk}")
                 print("")
 
-            # TODO: - Embed and Save
+            # If all chunks are empty just return
+            if not all_chunks:
+                print(f"There are no chunks to save.")
+                return
+
+            # Embed and Save to ChromaDB
+            print(
+                f"Embedding and saving {len(all_chunks)} chunks to {constants.CHROMA_PATH}...")
+            self.vector_db = Chroma.from_documents(
+                documents=all_chunks,
+                embedding=self.embeddings,
+                persist_directory=constants.CHROMA_PATH,
+                collection_name=constants.COLLECTION_NAME
+            )
+
+            print("Embedding process complete. Vector database built successfully.")
 
         except Exception as e:
             print(f"Unable to load the documents {e}")
+            self.vector_db = None
 
     def semantic_chunk(self, document: Document, doc_idx: int, chunk_size: int = 500, overlap: int = 50) -> list[Document]:
         """

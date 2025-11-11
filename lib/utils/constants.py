@@ -2,3 +2,8 @@ ABOUT_ME_FILE_PATH = "data/about_me.json"
 
 # BM25
 INDEX_FILE_PATH = "cache/index.pkl"
+
+# Semantic Search
+CHROMA_PATH = "chroma_db"
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+COLLECTION_NAME = "personal_profile_rag"

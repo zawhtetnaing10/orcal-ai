@@ -10,4 +10,8 @@ dependencies = [
     "langchain-community>=0.4.1",
     "nltk>=3.9.2",
     "rank-bm25>=0.2.2",
+    "huggingface-hub>=0.34.0,<1.0",
+    "sentence-transformers>=5.1.2",
+    "langchain-huggingface>=1.0.1",
+    "jq>=1.10.0"
 ]

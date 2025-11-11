@@ -12,3 +12,6 @@ wheels/
 # Personal data
 data/
 cache/
+
+# Vector Database
+chroma_db/
