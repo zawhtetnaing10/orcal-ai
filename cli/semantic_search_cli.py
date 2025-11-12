@@ -2,6 +2,7 @@ import argparse
 
 from lib.semantic_search.semantic_search import SemanticSearch
 from langchain_core.documents import Document
+import lib.utils.constants as constants
 
 
 def handle_semantic_chunk(semantic_search: SemanticSearch, text: str):
@@ -26,6 +27,17 @@ def handle_build_embeddings(semantic_search: SemanticSearch):
     semantic_search.build_embeddings()
 
 
+def handle_semantic_search(semantic_search: SemanticSearch, query: str, limit: int):
+    """
+        Handles search command
+    """
+    docs = semantic_search.semantic_search(query, limit)
+
+    for index, doc in enumerate(docs):
+        print(f"{index + 1}. {doc}")
+        print("")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Semantic Search CLI")
     subparsers = parser.add_subparsers(
@@ -41,6 +53,13 @@ def main():
     subparsers.add_parser(
         "build_embeddings", help="Build embeddings for the docs in about_me.json")
 
+    # Search
+    search_parser = subparsers.add_parser(
+        "search", help="Run semantic search based on query.")
+    search_parser.add_argument("query", type=str, help="Query to search")
+    search_parser.add_argument(
+        "--limit", type=int, default=constants.DEFAULT_ITEM_LIMIT, help="Number of items returned")
+
     # Semantic search object
     semantic_search = SemanticSearch()
 
@@ -52,6 +71,8 @@ def main():
             handle_semantic_chunk(semantic_search, args.text)
         case "build_embeddings":
             handle_build_embeddings(semantic_search)
+        case "search":
+            handle_semantic_search(semantic_search, args.query, args.limit)
 
 
 if __name__ == "__main__":

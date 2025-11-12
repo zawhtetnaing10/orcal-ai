@@ -7,3 +7,5 @@ INDEX_FILE_PATH = "cache/index.pkl"
 CHROMA_PATH = "chroma_db"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 COLLECTION_NAME = "personal_profile_rag"
+
+DEFAULT_ITEM_LIMIT = 3

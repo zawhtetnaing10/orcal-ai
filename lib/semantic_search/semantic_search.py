@@ -1,3 +1,4 @@
+import os
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -5,7 +6,7 @@ import lib.utils.data_loader_utils as data_loader_utils
 import lib.utils.constants as constants
 
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 
 
 class SemanticSearch:
@@ -17,6 +18,65 @@ class SemanticSearch:
         )
         self.vector_db = None
         self.documents = []
+
+    def semantic_search(self, query, limit=3) -> list[Document]:
+        """
+            Perform a semantic search according to query.
+            Will prepare the embeddings first before searching.
+        """
+        self.build_or_load_embeddings()
+
+        # Fetch double the amount of chunks since they'll have to be mapped back to documents
+        chunks_with_scores = self.vector_db.similarity_search_with_score(
+            query, limit * 2)
+
+        # Map the chunks to a dict with doc_idx as key and score as value
+        doc_idx_dict = {}
+        for chunk, score in chunks_with_scores:
+            doc_idx = int(chunk.metadata["doc_idx"])
+            if doc_idx in doc_idx_dict:
+                # If doc_id already in dict. Only overwrite if it has lower score (better similarity)
+                previous_score = doc_idx_dict[doc_idx]
+                if score < previous_score:
+                    doc_idx_dict[doc_idx] = score
+            else:
+                # If not, just add the doc_idx
+                doc_idx_dict[doc_idx] = score
+
+        # Sort the dict items with score
+        sorted_doc_idx_with_scores = sorted(
+            doc_idx_dict.items(), key=lambda item: item[1])
+        # Get the doc_idx
+        sorted_doc_idx = [
+            item[0] for item in sorted_doc_idx_with_scores
+        ]
+
+        # Map the doc_idx back to the original docs
+        result = [
+            self.documents[doc_idx] for doc_idx in sorted_doc_idx
+        ]
+
+        return result[:limit]
+
+    def build_or_load_embeddings(self):
+        """
+            If embeddings are already built, just load them.
+            If not, build the embeddings from scratch
+        """
+
+        # Load the documents first. To be sure
+        if not self.documents:
+            self.documents = data_loader_utils.load_about_me()
+
+        if os.path.exists(constants.CHROMA_PATH):
+            print(f"Vector db already exists")
+            self.vector_db = Chroma(
+                persist_directory=constants.CHROMA_PATH,
+                embedding_function=self.embeddings,
+                collection_name=constants.COLLECTION_NAME
+            )
+        else:
+            self.build_embeddings()
 
     def build_embeddings(self):
         """
