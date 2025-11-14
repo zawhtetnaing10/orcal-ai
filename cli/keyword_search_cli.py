@@ -24,7 +24,7 @@ def handle_search(inv_index: InvertedIndex, query: str, limit: int):
     results = inv_index.bm25_search(query, limit)
     for idx, result in enumerate(results):
         print("")
-        print(f"{idx + 1}. {result.metadata['title']}")
+        print(f"{idx + 1}. {result.metadata['title']} - {result.metadata}")
         print(f"{result.page_content}")
 
 
