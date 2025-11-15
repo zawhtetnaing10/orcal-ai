@@ -1,6 +1,7 @@
 from lib.semantic_search.semantic_search import SemanticSearch
 from lib.bm25_search.inverted_index import InvertedIndex
 from langchain_core.documents import Document
+import lib.utils.constants as constants
 
 
 class RRFSearch:
@@ -11,7 +12,7 @@ class RRFSearch:
         self.semantic_search = SemanticSearch()
         self.semantic_search.build_or_load_embeddings()
 
-    def rrf_search(self, query: str, limit: int, k: int = 60.0):
+    def rrf_search(self, query: str, limit: int, k: int = constants.K_VALUE):
         bm25_results = self.inverted_index.bm25_search(
             query=query, limit=limit * 500)
 

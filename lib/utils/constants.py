@@ -8,4 +8,11 @@ CHROMA_PATH = "chroma_db"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 COLLECTION_NAME = "personal_profile_rag"
 
-DEFAULT_ITEM_LIMIT = 3
+# RRF Search
+K_VALUE = 60.0
+
+# AI
+GEMINI_FLASH_MODEL = "gemini-2.0-flash-001"
+
+# Item Limit
+DEFAULT_ITEM_LIMIT = 5

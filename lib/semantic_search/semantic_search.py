@@ -24,7 +24,9 @@ class SemanticSearch:
             Perform a semantic search according to query.
             Will prepare the embeddings first before searching.
         """
-        self.build_or_load_embeddings()
+        if not os.path.exists(constants.CHROMA_PATH):
+            print(
+                f"Haven't built the embeddings yet. Please build the embeddings first before searching.")
 
         # Fetch double the amount of chunks since they'll have to be mapped back to documents
         chunks_with_scores = self.vector_db.similarity_search_with_score(
@@ -69,7 +71,6 @@ class SemanticSearch:
             self.documents = data_loader_utils.load_about_me()
 
         if os.path.exists(constants.CHROMA_PATH):
-            print(f"Vector db already exists")
             self.vector_db = Chroma(
                 persist_directory=constants.CHROMA_PATH,
                 embedding_function=self.embeddings,
