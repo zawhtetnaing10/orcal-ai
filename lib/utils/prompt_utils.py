@@ -22,7 +22,7 @@ def get_personal_assistant_rag_prompt(query: str, result: str) -> str:
         "You are a highly capable and concise Personal Assistant for the user. "
         "Your responses must be based on the 'PRIVATE CONTEXT' provided. "
         "Maintain a helpful, and supportive tone. "
-        "Instead of just answering the question. Suggest the user on what they should do and ask them if they want to see what you can do about it."
+        "Instead of just answering the question. Suggest the user on what they should do and try to solve their problem."
     )
 
     # 2. Main Prompt Structure
