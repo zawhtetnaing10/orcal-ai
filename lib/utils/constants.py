@@ -16,3 +16,8 @@ GEMINI_FLASH_MODEL = "gemini-2.0-flash-001"
 
 # Item Limit
 DEFAULT_ITEM_LIMIT = 5
+
+# RAG
+TURN_HISTORY_LIMIT = 5
+SPEAKER_USER = "user"
+SPEAKER_MODEL = "model"

@@ -1,10 +1,16 @@
 import argparse
 import sys
 from lib.augmented_generation.rag import RAG
+from lib.augmented_generation.rag import TurnHistory
+import lib.utils.constants as constants
 
 
 def handle_rag(rag: RAG):
     print("AI Assistant Online.....")
+
+    # Create the Turn History Object
+    turn_history = TurnHistory()
+
     while True:
         # Input
         sys.stdout.write("You: ")
@@ -17,13 +23,16 @@ def handle_rag(rag: RAG):
             exit(0)
 
         # Save the current query in Turn History
-
-        # Depending on Turn History, create a new prompt
+        turn_history.add_to_turn_history(
+            speaker=constants.SPEAKER_USER, text=query)
 
         # Response
-        response = rag.discuss(query)
+        response = rag.discuss(
+            query, turn_history=turn_history.get_turn_history_str())
 
         # Add the response in Turn History
+        turn_history.add_to_turn_history(
+            speaker=constants.SPEAKER_MODEL, text=response)
 
         print(f"Assistant: {response}")
 

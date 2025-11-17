@@ -1,4 +1,4 @@
-def get_personal_assistant_rag_prompt(query: str, result: str) -> str:
+def get_personal_assistant_rag_prompt(query: str, result: str, turn_history: str = "") -> str:
     """
     Generates a prompt for a personal assistant RAG system.
 
@@ -21,6 +21,7 @@ def get_personal_assistant_rag_prompt(query: str, result: str) -> str:
     system_instruction = (
         "You are a highly capable and concise Personal Assistant for the user. "
         "Your responses must be based on the 'PRIVATE CONTEXT' provided. "
+        "Previous messages with you will be provided in 'TURN HISTORY' but it can also be empty "
         "Maintain a helpful, and supportive tone. "
         "Instead of just answering the question. Suggest the user on what they should do and try to solve their problem."
     )
@@ -31,6 +32,8 @@ def get_personal_assistant_rag_prompt(query: str, result: str) -> str:
         f"{system_instruction}\n\n"
         f"--- PRIVATE CONTEXT ---\n"
         f"{result}\n"
+        f"--- TURN HISTORY ---\n"
+        F"{turn_history}\n"
         f"-----------------------\n\n"
         f"USER QUERY:\n"
         f"{query}\n\n"
