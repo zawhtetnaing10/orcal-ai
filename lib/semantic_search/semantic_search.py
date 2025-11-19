@@ -30,7 +30,7 @@ class SemanticSearch:
 
         # Fetch double the amount of chunks since they'll have to be mapped back to documents
         chunks_with_scores = self.vector_db.similarity_search_with_score(
-            query, limit * 2)
+            query, limit)
 
         # Map the chunks to a dict with doc_idx as key and score as value
         doc_idx_dict = {}
