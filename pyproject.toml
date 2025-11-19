@@ -15,5 +15,7 @@ dependencies = [
     "langchain-huggingface>=1.0.1",
     "jq>=1.10.0",
     "google-genai>=1.50.1",
-    "python-dotenv"
+    "python-dotenv",
+    "fastapi",
+    "uvicorn[standard]"
 ]
