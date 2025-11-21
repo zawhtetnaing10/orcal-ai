@@ -7,6 +7,8 @@ from lib.augmented_generation.rag import RAG
 from lib.augmented_generation.rag import TurnHistory
 import lib.utils.constants as constants
 
+from starlette.concurrency import run_in_threadpool
+
 
 app = FastAPI(
     title="Orcal AI",
@@ -28,8 +30,10 @@ def health_check():
     return {"status": "ok", "message": "API is online"}
 
 
+# TODO: - Make the request response system asynchronous.
 @app.post("/chat")
 async def chat(request: ChatRequest):
+    print("Request Received")
     query = request.query
 
     # Add user query to turn history. Replace with Firestore Turn History later.
@@ -37,8 +41,17 @@ async def chat(request: ChatRequest):
         speaker=constants.SPEAKER_USER, text=query)
 
     # Add error handling here.
-    llm_response = rag.discuss(
-        query, turn_history=turn_history.get_turn_history_str())
+    # llm_response = rag.discuss(
+    #     query, turn_history=turn_history.get_turn_history_str())
+    try:
+        llm_response = await run_in_threadpool(
+            rag.discuss,
+            query,
+            turn_history.get_turn_history_str()
+        )
+    except Exception as e:
+        print(f"ERROR processing RAG query: {e}")
+        llm_response = "Apologies, an internal error occurred while processing the request."
 
     # Add llm_response to turn history. Replacewith Firestore Turn History later.
     turn_history.add_to_turn_history(
