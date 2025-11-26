@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import uvicorn
 from backend.models.chat_request import ChatRequest
 from backend.models.chat_response import ChatResponse
+import backend.firebase.firebase_client as firebase_client
 
 from lib.augmented_generation.rag import RAG
 from lib.augmented_generation.rag import TurnHistory
@@ -33,6 +34,10 @@ def health_check():
 # TODO: - Make the request response system asynchronous.
 @app.post("/chat")
 async def chat(request: ChatRequest):
+
+    # Test Firebase Client
+    firestore = firebase_client.firestore
+
     print("Request Received")
     query = request.query
 
