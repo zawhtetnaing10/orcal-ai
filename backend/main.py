@@ -1,7 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 import uvicorn
 from backend.models.chat_request import ChatRequest
 from backend.models.chat_response import ChatResponse
+from backend.models.register_request import RegisterRequest
+from backend.models.user_response import UserResponse
 import backend.firebase.firebase_client as firebase_client
 
 from lib.augmented_generation.rag import RAG
@@ -9,6 +11,12 @@ from lib.augmented_generation.rag import TurnHistory
 import lib.utils.constants as constants
 
 from starlette.concurrency import run_in_threadpool
+from firebase_admin import auth
+from pydantic import BaseModel, Field
+
+import firebase_admin.exceptions as firebase_exceptions
+import asyncio
+from google.cloud.firestore import SERVER_TIMESTAMP
 
 
 app = FastAPI(
@@ -17,6 +25,7 @@ app = FastAPI(
 )
 
 # RAG Instance
+# TODO: - Turn back on after testing Login and Register.
 rag = RAG()
 
 # Turn History. Replace with last 5 messages from Firestore later.
@@ -31,13 +40,75 @@ def health_check():
     return {"status": "ok", "message": "API is online"}
 
 
-# TODO: - Make the request response system asynchronous.
+@app.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def register(request: RegisterRequest):
+    db = firebase_client.firestore_async
+
+    if not db:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not initialize firestore client."
+        )
+
+    # Authenticate with Firebase
+    try:
+        user_record = await asyncio.to_thread(
+            auth.create_user,
+            email=request.email,
+            password=request.password,
+            display_name=request.username
+        )
+        user_uid = user_record.uid
+    except firebase_exceptions.AlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The user with provided email already exists. Please try another email."
+        )
+    except Exception as exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{exception}"
+        )
+
+    # Create user info in firestore
+    try:
+        user_info = {
+            "uid": user_uid,
+            "email": request.email,
+            "username": request.username,
+            "created_at": SERVER_TIMESTAMP
+        }
+        user_doc_ref = db.collection("users").document(user_uid)
+        user_info_doc_ref = user_doc_ref.collection(
+            "profile").document("user_info")
+        await user_info_doc_ref.set(user_info)
+    except Exception as exception:
+
+        # Create user in auth succeeded but firestore failed.
+        # Rollback
+        try:
+            auth.delete_user(user_uid)
+        except Exception as delete_user_exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"{delete_user_exception}"
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{exception}"
+        )
+
+    # Return the response
+    return UserResponse(
+        uid=user_uid,
+        email=request.email,
+        username=request.username
+    )
+
+
 @app.post("/chat")
 async def chat(request: ChatRequest):
-
-    # Test Firebase Client
-    firestore = firebase_client.firestore
-
     print("Request Received")
     query = request.query
 
@@ -49,7 +120,7 @@ async def chat(request: ChatRequest):
     # llm_response = rag.discuss(
     #     query, turn_history=turn_history.get_turn_history_str())
     try:
-        llm_response = await run_in_threadpool(
+        llm_response = await asyncio.to_thread(
             rag.discuss,
             query,
             turn_history.get_turn_history_str()
