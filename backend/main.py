@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, status
 import uvicorn
+from backend.models.login_request import LoginRequest
 from backend.models.chat_request import ChatRequest
 from backend.models.chat_response import ChatResponse
 from backend.models.register_request import RegisterRequest
@@ -48,6 +49,24 @@ async def register(request: RegisterRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not initialize firestore client."
+        )
+
+    if not request.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email must be provided"
+        )
+
+    if not request.password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be provided"
+        )
+
+    if not request.username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User name must be provided"
         )
 
     # Authenticate with Firebase
