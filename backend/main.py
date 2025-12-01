@@ -1,10 +1,13 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Header, Depends, Request, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uvicorn
 from backend.models.login_request import LoginRequest
 from backend.models.chat_request import ChatRequest
 from backend.models.chat_response import ChatResponse
 from backend.models.register_request import RegisterRequest
 from backend.models.user_response import UserResponse
+from backend.models.generic_response import GenericResponse
+from backend.models.build_embeddings_request import BuildEmbeddingsRequest
 import backend.firebase.firebase_client as firebase_client
 
 from lib.augmented_generation.rag import RAG
@@ -24,6 +27,8 @@ app = FastAPI(
     title="Orcal AI",
     description="Personal Assistant RAG App"
 )
+# To get bearer token
+security = HTTPBearer()
 
 # RAG Instance
 # TODO: - Turn back on after testing Login and Register.
@@ -124,6 +129,49 @@ async def register(request: RegisterRequest):
         email=request.email,
         username=request.username
     )
+
+
+@app.post("/build-embeddings", response_model=GenericResponse, status_code=status.HTTP_200_OK)
+async def build_embeddings(request_data: BuildEmbeddingsRequest,
+                           credentials: HTTPAuthorizationCredentials = Security(security)):
+
+    # Authorize firebase credentials with firebase auth
+    # TODO: - Uncomment after client side authentication has been implemented.
+    # id_token = credentials.credentials
+    # user_id = await asyncio.to_thread(
+    #     authenticate_user,
+    #     id_token=id_token
+    # )
+
+    print(f"Request Data ======> {request_data}")
+    return GenericResponse(message="Test Endpoint")
+
+
+def authenticate_user(id_token: str):
+    """
+        User firebase authentication to authenticate id_token from client.
+    """
+    try:
+        decoded_token = auth.verify_id_token(id_token)
+        return decoded_token["uid"]
+    except ValueError as _:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Firebase token must be provided")
+    except auth.InvalidIdTokenError as _:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Firebase token is invalid")
+    except auth.ExpiredIdTokenError as _:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Firebase token has expired")
+    except auth.RevokedIdTokenError as _:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Firebase token has been revoked")
+    except auth.CertificateFetchError as _:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Certification fetch failed.")
+    except auth.UserDisabledError as _:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User record has been disabled.")
 
 
 @app.post("/chat")
