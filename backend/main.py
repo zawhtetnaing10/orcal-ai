@@ -137,14 +137,37 @@ async def build_embeddings(request_data: BuildEmbeddingsRequest,
 
     # Authorize firebase credentials with firebase auth
     # TODO: - Uncomment after client side authentication has been implemented.
-    # id_token = credentials.credentials
-    # user_id = await asyncio.to_thread(
-    #     authenticate_user,
-    #     id_token=id_token
-    # )
+    id_token = credentials.credentials
+    user_uid = await asyncio.to_thread(
+        authenticate_user,
+        id_token=id_token
+    )
 
-    print(f"Request Data ======> {request_data}")
-    return GenericResponse(message="Test Endpoint")
+    # Initialize Firestore
+    db = firebase_client.firestore_async
+    if not db:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not initialize firestore client."
+        )
+    batch = db.batch()
+
+    # Bulk Insert knowledge base objects
+    knowledge_objects = request_data.data
+    user_doc_ref = db.collection("users").document(user_uid)
+    knowledge_base_collection_ref = user_doc_ref.collection("knowledge_base")
+
+    for knowledge_object in knowledge_objects:
+        doc_ref = knowledge_base_collection_ref.document(
+            f"{knowledge_object.id}")
+        batch.set(doc_ref, {
+            "id": knowledge_object.id,
+            "title": knowledge_object.title,
+            "details": knowledge_object.details
+        })
+    await batch.commit()
+
+    return GenericResponse(message="Bulk Insert Successful.")
 
 
 def authenticate_user(id_token: str):
