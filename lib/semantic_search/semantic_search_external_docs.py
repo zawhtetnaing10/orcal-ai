@@ -14,6 +14,11 @@ from lib.semantic_search.user_vector_store_cache import USER_VECTOR_STORE_CACHE
 
 
 class SemanticSearchExternalDocs(SemanticSearch):
+    def __init__(self):
+        self.embeddings = HuggingFaceEmbeddings(
+            model_name=constants.EMBEDDING_MODEL_NAME,
+            model_kwargs={"device": "cpu"}
+        )
 
     def semantic_search(self, uid: str, query: str, limit=3) -> list[Document]:
         """
