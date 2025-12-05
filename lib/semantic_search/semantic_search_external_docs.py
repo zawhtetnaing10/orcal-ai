@@ -28,7 +28,9 @@ class SemanticSearchExternalDocs(SemanticSearch):
         vector_db = self.load_embeddings(uid)
 
         # Fetch double the amount of chunks since they'll have to be mapped back to documents
-        docs_with_scores = vector_db.similarity_search_with_score(
+        # docs_with_scores = vector_db.similarity_search_with_score(
+        #     query, limit)
+        result = vector_db.similarity_search(
             query, limit)
 
         # TODO: - If chunking is required later, add the logic back.
@@ -58,7 +60,7 @@ class SemanticSearchExternalDocs(SemanticSearch):
         #     self.documents[doc_idx] for doc_idx in sorted_doc_idx
         # ]
 
-        return docs_with_scores[:limit]
+        return result[:limit]
 
     def build_embeddings(self, documents, uid: str, is_chunked: bool = False):
         """
@@ -88,6 +90,12 @@ class SemanticSearchExternalDocs(SemanticSearch):
             # Embed and Save to ChromaDB
             print(
                 f"Embedding and saving {len(all_chunks)} chunks to {constants.CHROMA_PATH}...")
+
+            # If embeddings already exist delete it to avoid duplicate embeddings
+            if self._check_chroma_client_collection_exists(uid=uid):
+                self._delete_chroma_collection(uid=uid)
+
+            # Save the embeddings in chroma db.
             Chroma.from_documents(
                 documents=all_chunks,
                 embedding=self.embeddings,
@@ -117,7 +125,7 @@ class SemanticSearchExternalDocs(SemanticSearch):
         else:
             raise Exception("Embeddings haven't been built yet.")
 
-    def _check_chroma_client_collection_exists(self, uid: str):
+    def _check_chroma_client_collection_exists(self, uid: str) -> bool:
         """
             Check if chroma collection exists with the given uid
         """
@@ -129,3 +137,13 @@ class SemanticSearchExternalDocs(SemanticSearch):
         except Exception as e:
             print(f"Error checking chroma collection {e}")
             return False
+
+    def _delete_chroma_collection(self, uid: str):
+        """Deletes the entire collection for the given user UID."""
+        try:
+            client = chromadb.PersistentClient(path=constants.CHROMA_PATH)
+
+            client.delete_collection(name=uid)
+            print(f"Collection '{uid}' successfully deleted.")
+        except Exception as e:
+            print(f"Error during collection deletion (may not exist): {e}")
