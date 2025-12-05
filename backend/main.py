@@ -167,6 +167,8 @@ async def build_embeddings(request_data: BuildEmbeddingsRequest,
         })
     await batch.commit()
 
+    # TODO: - Convert InfoToEmbed objects into LangChain documents and build embeddings from it.
+
     return GenericResponse(message="Bulk Insert Successful.")
 
 
