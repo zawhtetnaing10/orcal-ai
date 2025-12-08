@@ -27,7 +27,8 @@ class RAG:
         return response.text
 
 
-class TurnHistory:
+# This Turn History is to be used in Cli app only.
+class InMemoryTurnHistory:
     def __init__(self):
         # Turn history must be in chronological order. Latest messages must be at the end
         self.history: list[(str, str)] = []

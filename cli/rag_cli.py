@@ -1,7 +1,7 @@
 import argparse
 import sys
 from lib.augmented_generation.rag import RAG
-from lib.augmented_generation.rag import TurnHistory
+from lib.augmented_generation.rag import InMemoryTurnHistory
 import lib.utils.constants as constants
 
 
@@ -9,7 +9,7 @@ def handle_rag(rag: RAG):
     print("AI Assistant Online.....")
 
     # Create the Turn History Object
-    turn_history = TurnHistory()
+    turn_history = InMemoryTurnHistory()
 
     while True:
         # Input

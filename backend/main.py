@@ -1,18 +1,15 @@
 from fastapi import FastAPI, HTTPException, status, Header, Depends, Request, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uvicorn
-from backend.models.login_request import LoginRequest
 from backend.models.chat_request import ChatRequest
-from backend.models.chat_response import ChatResponse
 from backend.models.register_request import RegisterRequest
 from backend.models.user_response import UserResponse
 from backend.models.generic_response import GenericResponse
 from backend.models.build_embeddings_request import BuildEmbeddingsRequest
 import backend.firebase.firebase_client as firebase_client
 
-from lib.augmented_generation.rag import RAG
-from lib.augmented_generation.rag import TurnHistory
 from lib.augmented_generation.rag_external import RAGExternal
+import backend.utils.constants as backend_constants
 import lib.utils.constants as constants
 
 from starlette.concurrency import run_in_threadpool
@@ -24,6 +21,8 @@ import asyncio
 from google.cloud.firestore import SERVER_TIMESTAMP
 
 import backend.utils.utils as utils
+from google.cloud.firestore import AsyncCollectionReference
+from google.cloud.firestore import Query
 
 
 app = FastAPI(
@@ -32,13 +31,6 @@ app = FastAPI(
 )
 # To get bearer token
 security = HTTPBearer()
-
-# RAG Instance
-# TODO: - Turn back on after testing Login and Register.
-rag = RAG()
-
-# Turn History. Replace with last 5 messages from Firestore later.
-turn_history = TurnHistory()
 
 
 @app.get("/")
@@ -227,34 +219,81 @@ def authenticate_user(id_token: str):
 
 
 @app.post("/chat")
-async def chat(request: ChatRequest):
-    print("Request Received")
-    query = request.query
+async def chat(request: ChatRequest, credentials: HTTPAuthorizationCredentials = Security(security)):
+    # Authorize firebase credentials with firebase auth
+    id_token = credentials.credentials
+    user_uid = await asyncio.to_thread(
+        authenticate_user,
+        id_token=id_token
+    )
 
-    # Add user query to turn history. Replace with Firestore Turn History later.
-    turn_history.add_to_turn_history(
-        speaker=constants.SPEAKER_USER, text=query)
-
-    # Add error handling here.
-    # llm_response = rag.discuss(
-    #     query, turn_history=turn_history.get_turn_history_str())
-    try:
-        llm_response = await asyncio.to_thread(
-            rag.discuss,
-            query,
-            turn_history.get_turn_history_str()
+    # Write the message in Firestore
+    # Get Firestore
+    db = firebase_client.firestore_async
+    if not db:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not initialize firestore client."
         )
-    except Exception as e:
-        print(f"ERROR processing RAG query: {e}")
-        llm_response = "Apologies, an internal error occurred while processing the request."
 
-    # Add llm_response to turn history. Replacewith Firestore Turn History later.
-    turn_history.add_to_turn_history(
-        speaker=constants.SPEAKER_MODEL, text=llm_response)
+    # Get Collection Ref
+    messages_collection_ref: AsyncCollectionReference = db.collection("users").document(user_uid).collection(
+        "chats").document(backend_constants.CONVERSATION_DOCUMENT_KEY).collection("messages")
 
-    chat_response = ChatResponse(response=llm_response)
+    # Get the last 5 messages from firestore and sort them
+    turn_history = []
+    turn_history_query = messages_collection_ref.order_by(
+        "timestamp",
+        direction=Query.DESCENDING
+    ).limit(5)
+    turn_history_firebase = await turn_history_query.get()
+    if len(turn_history_firebase) > 0:
+        # Sort turn history in reverse. For turn history to work, it must be in chronological order.
+        turn_history_dicts = [message.to_dict()
+                              for message in turn_history_firebase]
+        turn_history_dicts.sort(key=lambda message: message["timestamp"])
 
-    return chat_response
+        # Append the messages to turn_history
+        for message in turn_history_dicts:
+            turn_history_dict = utils.create_turn_history_object(
+                speaker=message["speaker"], text=message["content"])
+            turn_history.append(turn_history_dict)
+
+    # Get the message from the user.
+    query = request.query
+    # Write User's message in Cloud Firestore.
+    user_message_timestamp = utils.get_current_time_milliseconds()
+    message_dict = create_message_dict(
+        uid=user_uid, speaker=constants.SPEAKER_USER, content=query, timestamp=user_message_timestamp)
+    await messages_collection_ref.document(f"{user_message_timestamp}").set(message_dict)
+
+    # Generate the response from LLM
+    rag = RAGExternal()
+    turn_history_str = ""
+    if len(turn_history) > 0:
+        turn_history_str = f"{turn_history}"
+    llm_response = rag.discuss(
+        uid=user_uid, query=query, turn_history=turn_history_str)
+
+    # Write the LLM Response to Firestore.
+    llm_response_timestamp = utils.get_current_time_milliseconds()
+    message_dict = create_message_dict(
+        uid=user_uid, speaker=constants.SPEAKER_MODEL, content=llm_response, timestamp=llm_response_timestamp)
+    await messages_collection_ref.document(f"{llm_response_timestamp}").set(message_dict)
+
+    # Return the LLM Response
+    return GenericResponse(message=llm_response)
+
+
+def create_message_dict(uid: str, speaker: str, timestamp: int, content: str):
+    # Modify as needed later.
+    return {
+        "uid": uid,
+        "speaker": speaker,
+        "content": content,
+        "timestamp": timestamp,
+    }
+
 
 if __name__ == "__main__":
     # Restarts the server automatically on saving
