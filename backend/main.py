@@ -12,6 +12,7 @@ import backend.firebase.firebase_client as firebase_client
 
 from lib.augmented_generation.rag import RAG
 from lib.augmented_generation.rag import TurnHistory
+from lib.augmented_generation.rag_external import RAGExternal
 import lib.utils.constants as constants
 
 from starlette.concurrency import run_in_threadpool
@@ -21,6 +22,8 @@ from pydantic import BaseModel, Field
 import firebase_admin.exceptions as firebase_exceptions
 import asyncio
 from google.cloud.firestore import SERVER_TIMESTAMP
+
+import backend.utils.utils as utils
 
 
 app = FastAPI(
@@ -136,7 +139,6 @@ async def build_embeddings(request_data: BuildEmbeddingsRequest,
                            credentials: HTTPAuthorizationCredentials = Security(security)):
 
     # Authorize firebase credentials with firebase auth
-    # TODO: - Uncomment after client side authentication has been implemented.
     id_token = credentials.credentials
     user_uid = await asyncio.to_thread(
         authenticate_user,
@@ -152,24 +154,49 @@ async def build_embeddings(request_data: BuildEmbeddingsRequest,
         )
     batch = db.batch()
 
-    # Bulk Insert knowledge base objects
-    knowledge_objects = request_data.data
-    user_doc_ref = db.collection("users").document(user_uid)
-    knowledge_base_collection_ref = user_doc_ref.collection("knowledge_base")
+    try:
+        # Bulk Insert knowledge base objects
+        knowledge_objects = request_data.data
+        user_doc_ref = db.collection("users").document(user_uid)
+        knowledge_base_collection_ref = user_doc_ref.collection(
+            "knowledge_base")
 
-    for knowledge_object in knowledge_objects:
-        doc_ref = knowledge_base_collection_ref.document(
-            f"{knowledge_object.id}")
-        batch.set(doc_ref, {
-            "id": knowledge_object.id,
-            "title": knowledge_object.title,
-            "details": knowledge_object.details
-        })
-    await batch.commit()
+        for knowledge_object in knowledge_objects:
+            doc_ref = knowledge_base_collection_ref.document(
+                f"{knowledge_object.id}")
+            batch.set(doc_ref, {
+                "id": knowledge_object.id,
+                "title": knowledge_object.title,
+                "details": knowledge_object.details
+            })
+        await batch.commit()
+    except Exception as e:
+        print(f"Firebae bulk insert docs failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Something went wrong building the embeddings and indices."
+        )
 
-    # TODO: - Convert InfoToEmbed objects into LangChain documents and build embeddings from it.
+    try:
+        # Prepare docs from request
+        docs = utils.convert_build_embeddings_request_to_docs(
+            request=request_data, uid=user_uid)
 
-    return GenericResponse(message="Bulk Insert Successful.")
+        # Do the embeddings
+        rag = RAGExternal()
+        await asyncio.to_thread(
+            rag.build_embeddings_and_indices,
+            documents=docs,
+            uid=user_uid
+        )
+
+        return GenericResponse(message="Successfully built the embeddings.")
+    except Exception as e:
+        print(f"Building indices and embeddings failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Something went wrong building the embeddings and indices."
+        )
 
 
 def authenticate_user(id_token: str):
