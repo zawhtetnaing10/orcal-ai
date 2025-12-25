@@ -97,9 +97,8 @@ async def register(request: RegisterRequest):
             "username": request.username,
             "created_at": SERVER_TIMESTAMP
         }
-        user_doc_ref = db.collection("users").document(user_uid)
-        user_info_doc_ref = user_doc_ref.collection(
-            "profile").document("user_info")
+        user_info_doc_ref = db.collection("users").document(
+            user_uid).collection("profile").document("user_info")
         await user_info_doc_ref.set(user_info)
     except Exception as exception:
 
@@ -113,6 +112,20 @@ async def register(request: RegisterRequest):
                 detail=f"{delete_user_exception}"
             )
 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{exception}"
+        )
+
+    # Update RAG Config. Set knowledge base built flag to false
+    try:
+        rag_info = {
+            "is_knowledge_base_built": False,
+        }
+        user_rag_config_ref = db.collection("users").document(
+            user_uid).collection("config").document("rag_config")
+        await user_rag_config_ref.set(rag_info)
+    except Exception as exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{exception}"
@@ -149,9 +162,8 @@ async def build_embeddings(request_data: BuildEmbeddingsRequest,
     try:
         # Bulk Insert knowledge base objects
         knowledge_objects = request_data.data
-        user_doc_ref = db.collection("users").document(user_uid)
-        knowledge_base_collection_ref = user_doc_ref.collection(
-            "knowledge_base")
+        knowledge_base_collection_ref = db.collection(
+            "users").document(user_uid).collection("knowledge_base")
 
         for knowledge_object in knowledge_objects:
             doc_ref = knowledge_base_collection_ref.document(
@@ -160,7 +172,7 @@ async def build_embeddings(request_data: BuildEmbeddingsRequest,
                 "id": knowledge_object.id,
                 "title": knowledge_object.title,
                 "details": knowledge_object.details
-            })
+            }, merge=True)
         await batch.commit()
     except Exception as e:
         print(f"Firebae bulk insert docs failed: {e}")
@@ -181,14 +193,28 @@ async def build_embeddings(request_data: BuildEmbeddingsRequest,
             documents=docs,
             uid=user_uid
         )
-
-        return GenericResponse(message="Successfully built the embeddings.")
     except Exception as e:
         print(f"Building indices and embeddings failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Something went wrong building the embeddings and indices."
         )
+
+    # Update RAG Config. Set Knowledgebase built to true.
+    try:
+        rag_info = {
+            "is_knowledge_base_built": True,
+        }
+        user_rag_config_ref = db.collection("users").document(
+            user_uid).collection("config").document("rag_config")
+        await user_rag_config_ref.set(rag_info)
+    except Exception as exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{exception}"
+        )
+
+    return GenericResponse(message="Successfully built the embeddings.")
 
 
 def authenticate_user(id_token: str):
