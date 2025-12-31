@@ -18,5 +18,6 @@ dependencies = [
     "python-dotenv",
     "fastapi",
     "uvicorn[standard]",
-    "firebase-admin"
+    "firebase-admin",
+    "openai"
 ]

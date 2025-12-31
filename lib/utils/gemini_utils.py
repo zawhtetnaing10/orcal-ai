@@ -25,10 +25,10 @@ def get_client() -> genai.Client:
     return gemini_client
 
 
-def generate_response(prompt) -> genai.types.GenerateContentResponse:
+def generate_response(prompt) -> str:
     """
         Generates resposne using a prompt
     """
     response = gemini_client.models.generate_content(
         model=constants.GEMINI_FLASH_MODEL, contents=prompt)
-    return response
+    return response.text

@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, status, Header, Depends, Request, Se
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uvicorn
 from backend.models.chat_request import ChatRequest
+from backend.models.chat_response import ChatResponse
 from backend.models.register_request import RegisterRequest
 from backend.models.user_response import UserResponse
 from backend.models.generic_response import GenericResponse
@@ -308,7 +309,7 @@ async def chat(request: ChatRequest, credentials: HTTPAuthorizationCredentials =
     await messages_collection_ref.document(f"{llm_response_timestamp}").set(message_dict)
 
     # Return the LLM Response
-    return GenericResponse(message=llm_response)
+    return ChatResponse(response=llm_response)
 
 
 def create_message_dict(uid: str, speaker: str, timestamp: int, content: str):

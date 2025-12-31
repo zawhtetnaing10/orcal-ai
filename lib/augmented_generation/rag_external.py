@@ -2,7 +2,8 @@ from lib.augmented_generation.rag import RAG
 from lib.hybrid_search.rrf_search_external_docs import RRFSearchExternalDocs
 from langchain_core.documents import Document
 import lib.utils.constants as constants
-from lib.utils.genai_utils import generate_response
+from lib.utils.gemini_utils import generate_response
+from lib.utils.local_ai_utils import generate_local_llm_response
 from lib.utils.prompt_utils import get_personal_assistant_rag_prompt
 
 
@@ -31,6 +32,7 @@ class RAGExternal(RAG):
             query=query, result=results, turn_history=turn_history)
 
         # Generate
-        response = generate_response(prompt=prompt)
+        # response = generate_response(prompt=prompt)
+        response = generate_local_llm_response(prompt=prompt)
 
-        return response.text
+        return response
