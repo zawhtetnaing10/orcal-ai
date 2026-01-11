@@ -1,6 +1,6 @@
 # Oracle-AI 🔮
 
-Your Professional Persona RAG Assistant
+Your Professional Personal RAG Assistant
 
 ## 🚀 Overview
 
